@@ -10,7 +10,6 @@ ShotPlan lets you specify **exact frame indices where hard cuts should happen** 
 
 After denoising, the planning tokens are discarded — output shape and decoding are unchanged from the base model.
 
-<!-- TODO: teaser figure / example videos in assets/ -->
 
 ## Model Zoo
 
@@ -154,7 +153,6 @@ Key implementation files:
 @article{guo2026shotplan,
   title={ShotPlan: Cinematic Video Generation with Learnable Planning Token},
   author={Guo, Su and Liu, Guangce and Yang, Haosen and Wang, Jiepeng and Liu, Cong and Liu, Junqi and Huang, Haibin and Yao, Hongxun and Zhang, Chi and Li, Xuelong},
-  journal={arXiv preprint arXiv:<TBD>},
   year={2026}
 }
 ```
