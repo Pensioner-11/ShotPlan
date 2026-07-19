@@ -215,7 +215,7 @@ def run_task(pipe, task, args, output_dir):
         width=args.width,
         num_inference_steps=args.steps
     )
-    save_video(video_frames, output_path, fps=15, quality=5)
+    save_video(video_frames, output_path, fps=16, quality=5)
     print(f"Saved {output_path}")
 
 

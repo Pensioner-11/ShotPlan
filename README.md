@@ -50,7 +50,7 @@ huggingface-cli download Pensioner/ShotPlan-Wan2.2-T2V-A14B-HighNoise --local-di
 
 ### 3. Generate
 
-Prompts follow a hierarchical format: a global scene description followed by per-shot captions. `--cut_at` takes frame indices (81-frame video, 16 fps for Wan2.1 / 15 fps for Wan2.2).
+Prompts follow a hierarchical format: a global scene description followed by per-shot captions. `--cut_at` takes frame indices (81-frame video @ 16 fps).
 
 **Wan2.1:**
 
