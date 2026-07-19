@@ -24,7 +24,7 @@ Training data: [Pensioner/shotplan](https://huggingface.co/datasets/Pensioner/sh
 ## Installation
 
 ```bash
-git clone https://github.com/<TBD>/ShotPlan.git
+git clone https://github.com/Pensioner-11/ShotPlan.git
 cd ShotPlan
 pip install -r requirements.txt
 ```
