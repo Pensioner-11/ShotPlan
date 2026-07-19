@@ -2,11 +2,14 @@
 
 # ShotPlan: Cinematic Video Generation with Learnable Planning Token
 
-<p>
-  <a href="https://pensioner-11.github.io/ShotPlan/"><img src="https://img.shields.io/badge/Project-Page-1f6feb?style=for-the-badge" alt="Project Page"></a>
-  <a href="docs/assets/shotplan_paper.pdf"><img src="https://img.shields.io/badge/Paper-PDF-b31b1b?style=for-the-badge" alt="Paper"></a>
-  <a href="https://huggingface.co/Pensioner/ShotPlan-Wan2.2-T2V-A14B-HighNoise"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Model-Hugging%20Face-ffcc4d?style=for-the-badge" alt="Model"></a>
-  <a href="https://huggingface.co/datasets/Pensioner/shotplan"><img src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20Dataset-shotplan-4dc0b5?style=for-the-badge" alt="Dataset"></a>
+<p align="center">
+  <a href="https://pensioner-11.github.io/ShotPlan/"><b>🌐 Project Page</b></a>
+  &nbsp;·&nbsp;
+  <a href="docs/assets/shotplan_paper.pdf"><b>📄 Paper</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://huggingface.co/Pensioner/ShotPlan-Wan2.2-T2V-A14B-HighNoise"><b>🤗 Model</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://huggingface.co/datasets/Pensioner/shotplan"><b>🗂️ Dataset</b></a>
 </p>
 
 **Su Guo**<sup>\*</sup> · **Guangce Liu**<sup>\*</sup> · Haosen Yang · Jiepeng Wang · Cong Liu · Junqi Liu · Haibin Huang · Hongxun Yao · Chi Zhang · Xuelong Li
@@ -23,7 +26,7 @@ A single learnable embedding is replicated once per requested transition event a
 
 | Model | Base | Hugging Face |
 |---|---|---|
-| **ShotPlan-Wan2.2-T2V-A14B-HighNoise** | Wan2.2-T2V-A14B (high-noise expert) | [Pensioner/ShotPlan-Wan2.2-T2V-A14B-HighNoise](https://huggingface.co/Pensioner/ShotPlan-Wan2.2-T2V-A14B-HighNoise) |
+| ShotPlan-Wan2.2-T2V-A14B-HighNoise | Wan2.2-T2V-A14B (high-noise expert) | [Pensioner/ShotPlan-Wan2.2-T2V-A14B-HighNoise](https://huggingface.co/Pensioner/ShotPlan-Wan2.2-T2V-A14B-HighNoise) |
 | ShotPlan-Wan2.1-T2V-14B | Wan2.1-T2V-14B | [Pensioner/ShotPlan-Wan2.1-T2V-14B](https://huggingface.co/Pensioner/ShotPlan-Wan2.1-T2V-14B) |
 
 **Training data:** [Pensioner/shotplan](https://huggingface.co/datasets/Pensioner/shotplan) — 6.4K multi-shot samples curated from VidEvent with TransNet V2 + Gemini 2.5.
