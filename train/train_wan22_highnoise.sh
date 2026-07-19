@@ -21,9 +21,10 @@ export MASTER_PORT="${MASTER_PORT:-29501}"
 export TOKENIZERS_PARALLELISM=false
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ACCELERATE_CONFIG="${ACCELERATE_CONFIG:-${SCRIPT_DIR}/accelerate_config_8gpu.yaml}"
 
 accelerate launch \
-  --config_file "${SCRIPT_DIR}/accelerate_config_8gpu.yaml" \
+  --config_file "${ACCELERATE_CONFIG}" \
   "${SCRIPT_DIR}/train.py" \
   --dataset_base_path . \
   --dataset_metadata_path "${METADATA}" \
