@@ -6,7 +6,6 @@ ShotPlan lets you specify **exact frame indices where hard cuts should happen** 
 
 - **Learnable planning tokens** — a single learnable token, replicated per user-specified transition, is concatenated with the visual tokens and processed by the DiT as an in-context conditioning signal. No attention masks, no architectural surgery.
 - **Fractional Temporal RoPE (FRoPE)** — video diffusion models operate in a temporally compressed latent space (4 physical frames per latent step), so cut timestamps rarely align with integer latent indices. Planning tokens are assigned *fractional* temporal RoPE coordinates (`t = 1 + frame/4`), enabling frame-level transition control while visual tokens keep the original pretrained RoPE.
-- **High-noise-expert fine-tuning for Wan2.2 MoE** — shot structure is decided early in the denoising trajectory. For Wan2.2-T2V-A14B, only the high-noise expert is fine-tuned with planning tokens; the low-noise expert stays frozen and a model-function router dispatches between them at inference.
 
 After denoising, the planning tokens are discarded — output shape and decoding are unchanged from the base model.
 
