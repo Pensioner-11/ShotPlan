@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShotPlan: Cinematic Video Generation with Learnable Planning Token</title>
+<meta name="description" content="ShotPlan enables multi-shot cinematic video generation with frame-accurate hard cuts, soft transitions and temporally localized camera movement via learnable planning tokens.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0b10;
+  --bg-soft:#10121a;
+  --bg-card:#151824;
+  --line:rgba(255,255,255,.08);
+  --line-strong:rgba(255,255,255,.14);
+  --text:#e8eaf2;
+  --text-dim:#9aa1b5;
+  --text-faint:#6a7186;
+  --gold:#e8b45a;
+  --gold-soft:rgba(232,180,90,.14);
+  --teal:#5ad0c8;
+  --rose:#e87a7a;
+  --radius:16px;
+  --maxw:1120px;
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-serif:'Playfair Display',Georgia,serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-sans);
+  font-size:16px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--gold);color:#141414}
+
+/* ---------- layout helpers ---------- */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+section{padding:72px 0}
+.section-kicker{
+  font-family:var(--font-mono);
+  font-size:12px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color:var(--gold);
+  margin-bottom:12px;
+}
+.section-title{
+  font-family:var(--font-serif);
+  font-size:clamp(26px,3.4vw,38px);
+  font-weight:700;
+  letter-spacing:.01em;
+  margin-bottom:22px;
+}
+.section-sub{color:var(--text-dim);max-width:820px;margin-bottom:36px}
+
+/* ---------- hero ---------- */
+.hero{
+  position:relative;
+  padding:96px 0 64px;
+  text-align:center;
+  overflow:hidden;
+  border-bottom:1px solid var(--line);
+  background:
+    radial-gradient(1100px 480px at 50% -12%, rgba(232,180,90,.13), transparent 62%),
+    radial-gradient(900px 420px at 12% 8%, rgba(90,208,200,.07), transparent 60%),
+    radial-gradient(900px 420px at 88% 6%, rgba(232,122,122,.06), transparent 60%),
+    var(--bg);
+}
+.hero::before{
+  content:"";
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size:56px 56px;
+  mask-image:radial-gradient(700px 420px at 50% 0%, #000 30%, transparent 78%);
+  pointer-events:none;
+}
+.hero .wrap{position:relative}
+.venue-chip{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--font-mono);font-size:12px;letter-spacing:.14em;
+  color:var(--gold);
+  background:var(--gold-soft);
+  border:1px solid rgba(232,180,90,.32);
+  border-radius:999px;
+  padding:7px 16px;
+  margin-bottom:28px;
+}
+.venue-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold)}
+h1.title{
+  font-family:var(--font-serif);
+  font-size:clamp(34px,5.4vw,62px);
+  font-weight:700;
+  line-height:1.14;
+  letter-spacing:.005em;
+  margin:0 auto 10px;
+  max-width:980px;
+}
+h1.title .shot{color:var(--gold)}
+.subtitle{
+  font-size:clamp(16px,2vw,20px);
+  color:var(--text-dim);
+  margin:6px auto 34px;
+  max-width:760px;
+}
+.authors{
+  font-size:16.5px;
+  line-height:2.05;
+  max-width:860px;
+  margin:0 auto 8px;
+}
+.authors a{color:var(--text);text-decoration:none;border-bottom:1px solid transparent;transition:.18s}
+.authors a:hover{color:var(--gold);border-bottom-color:var(--gold)}
+.authors sup{color:var(--gold);font-size:.72em;margin-left:1px}
+.affil{color:var(--text-dim);font-size:14.5px;line-height:1.9;margin-bottom:6px}
+.affil sup{color:var(--gold)}
+.equal-note{color:var(--text-faint);font-size:13px;margin-bottom:36px}
+.equal-note sup{color:var(--gold)}
+.hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;gap:9px;
+  padding:12px 26px;
+  border-radius:999px;
+  font-size:15px;font-weight:600;
+  text-decoration:none;
+  border:1px solid var(--line-strong);
+  color:var(--text);
+  background:rgba(255,255,255,.04);
+  transition:transform .18s, background .18s, border-color .18s, box-shadow .18s;
+}
+.btn svg{width:17px;height:17px;flex:none}
+.btn:hover{transform:translateY(-2px);background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.26)}
+.btn.primary{
+  background:linear-gradient(135deg,#f0c169,#d99a3d);
+  border-color:transparent;color:#1a1405;
+  box-shadow:0 6px 26px rgba(232,180,90,.28);
+}
+.btn.primary:hover{box-shadow:0 10px 34px rgba(232,180,90,.4)}
+.hero-scrollhint{margin-top:52px;color:var(--text-faint);font-size:12px;letter-spacing:.2em;font-family:var(--font-mono);text-transform:uppercase}
+
+/* ---------- teaser ---------- */
+.teaser{padding-top:56px}
+.figure-card{
+  background:var(--bg-card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:14px;
+  box-shadow:0 24px 70px rgba(0,0,0,.45);
+}
+.figure-card img{width:100%;display:block;border-radius:10px;background:#fff}
+.figure-cap{
+  color:var(--text-dim);
+  font-size:14px;
+  margin-top:18px;
+  max-width:900px;
+  margin-left:auto;margin-right:auto;
+  text-align:center;
+}
+.figure-cap b{color:var(--text)}
+
+/* ---------- feature strip ---------- */
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:44px}
+.feature{
+  background:var(--bg-card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:24px 24px 22px;
+  transition:border-color .2s, transform .2s;
+}
+.feature:hover{border-color:rgba(232,180,90,.36);transform:translateY(-3px)}
+.feature .icon{
+  width:42px;height:42px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--gold-soft);
+  border:1px solid rgba(232,180,90,.28);
+  margin-bottom:16px;
+}
+.feature .icon svg{width:21px;height:21px;stroke:var(--gold)}
+.feature h3{font-size:16.5px;font-weight:700;margin-bottom:8px}
+.feature p{font-size:14px;color:var(--text-dim)}
+.feature p code{font-family:var(--font-mono);font-size:12.5px;color:var(--teal)}
+
+/* ---------- abstract ---------- */
+.abstract-box{
+  background:var(--bg-card);
+  border:1px solid var(--line);
+  border-left:3px solid var(--gold);
+  border-radius:var(--radius);
+  padding:36px 42px;
+  font-size:16.5px;
+  color:#cfd4e2;
+  line-height:1.85;
+}
+.abstract-box b{color:var(--text)}
+
+/* ---------- method ---------- */
+.method-points{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px}
+.mpoint{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:22px 22px 20px;
+}
+.mpoint .num{
+  font-family:var(--font-mono);font-size:12px;color:var(--gold);
+  letter-spacing:.18em;margin-bottom:10px;
+}
+.mpoint h3{font-size:15.5px;font-weight:700;margin-bottom:8px}
+.mpoint p{font-size:13.8px;color:var(--text-dim)}
+.mpoint code,.formula code{font-family:var(--font-mono);font-size:12.8px;color:var(--teal);background:rgba(90,208,200,.08);padding:1px 6px;border-radius:5px}
+.formula{
+  margin-top:26px;
+  background:rgba(90,208,200,.05);
+  border:1px solid rgba(90,208,200,.18);
+  border-radius:var(--radius);
+  padding:20px 28px;
+  font-size:14.5px;color:var(--text-dim);
+  text-align:center;
+}
+.formula .eq{font-family:var(--font-mono);font-size:17px;color:var(--teal);display:block;margin-bottom:8px}
+
+/* ---------- gallery ---------- */
+.gallery{background:var(--bg-soft);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:34px}
+.tab{
+  font-size:14px;font-weight:600;
+  padding:9px 20px;border-radius:999px;
+  border:1px solid var(--line-strong);
+  background:transparent;color:var(--text-dim);
+  cursor:pointer;transition:.18s;
+  font-family:var(--font-sans);
+}
+.tab:hover{color:var(--text);border-color:rgba(255,255,255,.3)}
+.tab.active{
+  background:linear-gradient(135deg,#f0c169,#d99a3d);
+  color:#1a1405;border-color:transparent;
+  box-shadow:0 4px 18px rgba(232,180,90,.25);
+}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.vcard{
+  background:var(--bg-card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  overflow:hidden;
+  transition:transform .2s, border-color .2s, box-shadow .2s;
+}
+.vcard:hover{transform:translateY(-4px);border-color:rgba(232,180,90,.34);box-shadow:0 18px 46px rgba(0,0,0,.5)}
+.vcard video{width:100%;aspect-ratio:832/480;display:block;background:#000;cursor:pointer}
+.vmeta{padding:14px 16px 16px}
+.vmeta .vtitle{font-size:14px;font-weight:600;margin-bottom:9px}
+.vmeta .vprompt{
+  font-size:12.5px;color:var(--text-dim);line-height:1.5;
+  margin-bottom:10px;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  min-height:56px;
+}
+.vmeta .vprompt::before{content:'“';color:var(--gold)}
+.vmeta .vprompt::after{content:'”';color:var(--gold)}
+.cutbar{
+  position:relative;height:5px;border-radius:3px;
+  background:rgba(255,255,255,.09);
+  margin-bottom:9px;
+}
+.cutbar .marker{
+  position:absolute;top:-3.5px;width:2.5px;height:12px;border-radius:2px;
+  background:var(--gold);box-shadow:0 0 8px rgba(232,180,90,.75);
+}
+.cutbar .head{
+  position:absolute;top:-2.5px;width:10px;height:10px;border-radius:50%;
+  background:var(--teal);box-shadow:0 0 8px rgba(90,208,200,.8);
+  transform:translateX(-5px);left:0%;
+  transition:left .12s linear;
+}
+.cutlabels{display:flex;justify-content:space-between;align-items:center}
+.cutlabels .cuts{font-family:var(--font-mono);font-size:11.5px;color:var(--gold)}
+.cutlabels .shots{font-family:var(--font-mono);font-size:11.5px;color:var(--text-faint)}
+.gallery-note{color:var(--text-faint);font-size:13px;margin-top:26px;text-align:center}
+.gallery-note b{color:var(--gold);font-weight:600}
+
+/* ---------- results ---------- */
+.tables{display:grid;grid-template-columns:1fr;gap:24px;align-items:start}
+.tcard table{min-width:640px}
+.tcard{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:26px 26px 20px;overflow-x:auto;
+}
+.tcard h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.tcard .tsub{font-size:13px;color:var(--text-faint);margin-bottom:18px}
+table{width:100%;border-collapse:collapse;font-size:13.8px;white-space:nowrap}
+th{
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;
+  color:var(--text-faint);text-transform:uppercase;
+  text-align:right;padding:8px 10px;border-bottom:1px solid var(--line-strong);
+}
+th:first-child,td:first-child{text-align:left;padding-left:2px}
+td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);color:var(--text-dim)}
+tr:last-child td{border-bottom:none}
+tr.ours td{
+  color:var(--text);font-weight:600;
+  background:linear-gradient(90deg, rgba(232,180,90,.10), rgba(232,180,90,.03));
+}
+tr.ours td:first-child{color:var(--gold)}
+td .best{color:var(--gold);font-weight:700}
+.ablation-list{list-style:none;margin-top:2px}
+.ablation-list li{
+  display:flex;justify-content:space-between;gap:14px;
+  padding:9px 2px;border-bottom:1px solid var(--line);
+  font-size:13.8px;color:var(--text-dim);
+}
+.ablation-list li:last-child{border-bottom:none}
+.ablation-list li span:last-child{font-family:var(--font-mono)}
+.ablation-list li.ours{color:var(--gold);font-weight:700}
+
+/* ---------- bibtex ---------- */
+.bibtex-card{
+  position:relative;
+  background:#0d0f16;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:28px 30px;
+}
+.bibtex-card pre{
+  font-family:var(--font-mono);
+  font-size:13.2px;line-height:1.75;
+  color:#b9c0d4;
+  overflow-x:auto;
+}
+.bibtex-card .key{color:var(--gold)}
+.copy-btn{
+  position:absolute;top:16px;right:16px;
+  font-family:var(--font-mono);font-size:12px;
+  padding:7px 14px;border-radius:8px;
+  border:1px solid var(--line-strong);
+  background:rgba(255,255,255,.05);color:var(--text-dim);
+  cursor:pointer;transition:.18s;
+}
+.copy-btn:hover{color:var(--text);border-color:rgba(255,255,255,.3)}
+
+/* ---------- footer ---------- */
+footer{
+  border-top:1px solid var(--line);
+  padding:44px 0 52px;
+  text-align:center;
+  color:var(--text-faint);font-size:13.5px;
+}
+footer a{color:var(--text-dim);text-decoration:none}
+footer a:hover{color:var(--gold)}
+
+/* ---------- responsive ---------- */
+@media (max-width:920px){
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .features,.method-points{grid-template-columns:1fr}
+  .tables{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  .grid{grid-template-columns:1fr}
+  section{padding:52px 0}
+  .abstract-box{padding:26px 24px}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= HERO ================= -->
+<header class="hero">
+  <div class="wrap">
+    <div class="venue-chip"><span class="dot"></span>MULTI-SHOT CINEMATIC VIDEO GENERATION</div>
+    <h1 class="title"><span class="shot">ShotPlan</span>: Cinematic Video Generation with Learnable Planning Token</h1>
+    <p class="subtitle">Frame-accurate hard cuts, soft transitions and temporally localized camera movement — planned inside the diffusion transformer itself.</p>
+
+    <p class="authors">
+      Su&nbsp;Guo<sup>*1,2</sup> &nbsp;·&nbsp; Guangce&nbsp;Liu<sup>*1</sup> &nbsp;·&nbsp; Haosen&nbsp;Yang &nbsp;·&nbsp; Jiepeng&nbsp;Wang<sup>1</sup> &nbsp;·&nbsp; Cong&nbsp;Liu<sup>1</sup> &nbsp;·&nbsp; Junqi&nbsp;Liu<sup>1</sup><br>
+      Haibin&nbsp;Huang<sup>1</sup> &nbsp;·&nbsp; Hongxun&nbsp;Yao<sup>2</sup> &nbsp;·&nbsp; Chi&nbsp;Zhang<sup>1</sup> &nbsp;·&nbsp; Xuelong&nbsp;Li<sup>1</sup>
+    </p>
+    <p class="affil"><sup>1</sup>Institute of Artificial Intelligence (TeleAI), China Telecom &nbsp;&nbsp; <sup>2</sup>Harbin Institute of Technology</p>
+    <p class="equal-note"><sup>*</sup>Equal contribution</p>
+
+    <div class="hero-btns">
+      <a class="btn primary" href="assets/shotplan_paper.pdf" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+        Paper
+      </a>
+      <a class="btn" href="https://github.com/Pensioner-11/ShotPlan" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-2.15c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.75 2.69 1.25 3.35.95.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.25.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.76.11 3.05.73.81 1.18 1.84 1.18 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12v3.14c0 .3.21.66.8.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+        Code
+      </a>
+      <a class="btn" href="https://huggingface.co/Pensioner/ShotPlan-Wan2.1-T2V-14B" target="_blank" rel="noopener">
+        <span style="font-size:17px;line-height:1">🤗</span>
+        Model
+      </a>
+      <a class="btn" href="https://huggingface.co/datasets/Pensioner/shotplan" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        Dataset
+      </a>
+      <a class="btn" href="#gallery">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Video Gallery
+      </a>
+    </div>
+
+    <div class="hero-scrollhint">▾ scroll</div>
+  </div>
+</header>
+
+<!-- ================= TEASER ================= -->
+<section class="teaser">
+  <div class="wrap">
+    <div class="figure-card">
+      <img src="assets/figures/teaser.png" alt="ShotPlan teaser: hard cuts, soft transitions and camera movement control">
+    </div>
+    <p class="figure-cap"><b>ShotPlan</b> generates multi-shot videos with <b>hard cuts</b> at user-specified timestamps, smooth <b>soft transitions</b> (cross-fades), and <b>temporally localized camera movement</b> — all from a single text prompt with per-shot captions.</p>
+
+    <div class="features">
+      <div class="feature">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg></div>
+        <h3>Frame-Accurate Hard Cuts</h3>
+        <p>Shot boundaries land exactly where you ask — transition deviation of just <code>0.64</code> frames, an order of magnitude below prior methods.</p>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7a5 5 0 1 0 5 5"/><circle cx="12" cy="12" r="1"/></svg></div>
+        <h3>Soft Transitions</h3>
+        <p>The same planning-token mechanism handles cross-fades: separate learnable tokens mark <code>fade-in begin</code> and <code>fade-in end</code>.</p>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+        <h3>Timed Camera Movement</h3>
+        <p>Camera motions like <code>circle-left</code> can be triggered at an exact frame, enabling shot-level cinematography inside one continuous take.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ABSTRACT ================= -->
+<section>
+  <div class="wrap">
+    <div class="section-kicker">Abstract</div>
+    <h2 class="section-title">One token per transition, planned in latent space</h2>
+    <div class="abstract-box">
+      Cinematic multi-shot video generation requires precise control over <b>when</b> shots change, not just what they contain. Existing approaches struggle to place transitions at user-specified timestamps, drifting by several frames or ignoring the request altogether. We present <b>ShotPlan</b>, a framework that equips a pre-trained text-to-video diffusion transformer with <b>learnable planning tokens</b>: a single learnable embedding is replicated once per requested transition event and concatenated with the visual tokens. To tell each planning token <i>where in time</i> it acts, we introduce <b>Fractional Temporal RoPE (FRoPE)</b>, which assigns each token a fractional latent-time coordinate derived from its target frame — video tokens keep their original positions, so the backbone's spatio-temporal prior is untouched. The tokens participate in standard self-attention with no masking, steer the denoising process toward the requested shot structure, and are simply discarded before decoding. Trained on 13K curated multi-shot clips, ShotPlan achieves frame-accurate hard cuts, smooth soft transitions, and temporally localized camera movement, outperforming existing multi-shot methods in transition accuracy, cross-shot consistency and narrative coherence.
+    </div>
+  </div>
+</section>
+
+<!-- ================= METHOD ================= -->
+<section>
+  <div class="wrap">
+    <div class="section-kicker">Method</div>
+    <h2 class="section-title">How ShotPlan works</h2>
+    <p class="section-sub">ShotPlan is built on Wan2.1-T2V-14B and changes nothing about the backbone's treatment of video tokens — planning happens entirely through a handful of extra tokens.</p>
+
+    <div class="figure-card">
+      <img src="assets/figures/overview.png" alt="ShotPlan method overview: planning tokens with fractional RoPE injected into a DiT">
+    </div>
+    <p class="figure-cap">Latents are patchified as usual; for a request like <b>hard cuts at frames 21, 46, 64</b>, three copies of the learnable planning embedding are appended with fractional temporal positions <b>6.00, 12.25, 16.75</b>. They attend jointly with visual tokens through every DiT block and are removed before unpatchify.</p>
+
+    <div class="method-points">
+      <div class="mpoint">
+        <div class="num">01 — PLANNING TOKENS</div>
+        <h3>One embedding, replicated per event</h3>
+        <p>Each transition type (hard cut, fade-in begin, fade-in end, camera move) owns a single learnable embedding <code>F</code>. It is replicated once per requested event and concatenated with the visual token sequence — no attention masks, no architectural surgery.</p>
+      </div>
+      <div class="mpoint">
+        <div class="num">02 — FRACTIONAL ROPE</div>
+        <h3>Frame-level timing in latent time</h3>
+        <p>The 3D VAE compresses time 4×, so integer latent positions can't express arbitrary frames. FRoPE gives each planning token a <em>fractional</em> temporal coordinate, letting it point between latent frames while video tokens keep standard RoPE.</p>
+      </div>
+      <div class="mpoint">
+        <div class="num">03 — REMOVE &amp; DECODE</div>
+        <h3>Zero inference overhead in the output</h3>
+        <p>After the final DiT block the planning tokens are sliced off; only visual tokens are unpatchified and decoded. The tokens exist purely to steer denoising — the output video has the exact same shape as the base model's.</p>
+      </div>
+    </div>
+
+    <div class="formula">
+      <span class="eq">t̃<sub>u</sub> = 1 + (t<sub>u</sub> − 1) / s<sub>t</sub></span>
+      A cut requested at video frame <code>t&#8203;u</code> maps to fractional latent time with temporal stride <code>s&#8203;t&nbsp;=&nbsp;4</code> — e.g. frame 21 → position 6.00, frame 46 → 12.25, frame 64 → 16.75.
+    </div>
+  </div>
+</section>
+
+<!-- ================= GALLERY ================= -->
+<section class="gallery" id="gallery">
+  <div class="wrap">
+    <div class="section-kicker">Results</div>
+    <h2 class="section-title">Video gallery</h2>
+    <p class="section-sub">All videos are generated at 832×480, 81 frames, from a single prompt with per-shot captions. Gold markers on each timeline show where each cut happens. Hover to play with sound off; videos loop.</p>
+
+    <div class="grid" id="grid"></div>
+
+    <p class="gallery-note">Timeline legend — <b>▮ gold ticks</b>: cut frames &nbsp;·&nbsp; <span style="color:var(--teal)">● teal dot</span>: playback position &nbsp;·&nbsp; all clips are 81 frames.</p>
+  </div>
+</section>
+
+<!-- ================= SOFT TRANSITION ================= -->
+<section id="soft">
+  <div class="wrap">
+    <div class="section-kicker">Soft Transition</div>
+    <h2 class="section-title">Cross-fades, planned the same way</h2>
+    <p class="section-sub">Two planning tokens — <span style="font-family:var(--font-mono);color:var(--teal)">fade-in begin</span> and <span style="font-family:var(--font-mono);color:var(--teal)">fade-in end</span> — bracket the transition window, producing a smooth dissolve between shots instead of a hard cut.</p>
+    <div class="grid" id="softgrid" style="grid-template-columns:repeat(2,1fr);max-width:900px;margin:0 auto"></div>
+  </div>
+</section>
+
+<!-- ================= CAMERA MOVEMENT ================= -->
+<section class="gallery" id="camera">
+  <div class="wrap">
+    <div class="section-kicker">Camera Movement</div>
+    <h2 class="section-title">Temporally localized camera control</h2>
+    <p class="section-sub">A camera-movement planning token triggers a specific motion — circle, zoom, dolly, truck — at an exact frame inside one continuous take. The gold tick marks where the movement is scheduled to begin. For easier viewing, a blue box is drawn around the outer border of the video at the frame where the camera movement starts.</p>
+    <div class="grid" id="camgrid"></div>
+  </div>
+</section>
+
+<!-- ================= QUANTITATIVE ================= -->
+<section>
+  <div class="wrap">
+    <div class="section-kicker">Benchmark</div>
+    <h2 class="section-title">Quantitative comparison</h2>
+    <p class="section-sub">On the multi-shot generation benchmark, ShotPlan cuts transition deviation to well under one frame while also leading on consistency and narrative coherence.</p>
+
+    <div class="tables">
+      <div class="tcard">
+        <h3>Multi-shot generation benchmark</h3>
+        <div class="tsub">Transition Deviation in frames (lower is better); other metrics higher is better.</div>
+        <table>
+          <thead>
+            <tr><th>Method</th><th>Trans. Dev ↓</th><th>Text Align ↑</th><th>Char. Cons ↑</th><th>Scene Cons ↑</th><th>Narrative ↑</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>CineTrans</td><td>4.73</td><td>0.25</td><td>0.32</td><td>0.21</td><td>0.48</td></tr>
+            <tr><td>EchoShot</td><td>6.95</td><td>0.26</td><td>0.31</td><td>0.23</td><td>0.51</td></tr>
+            <tr><td>HoloCine</td><td>2.71</td><td><span class="best">0.28</span></td><td>0.39</td><td>0.32</td><td>0.85</td></tr>
+            <tr><td>MultiShotMaster</td><td>1.12</td><td>0.27</td><td>0.36</td><td>0.28</td><td>0.83</td></tr>
+            <tr class="ours"><td>ShotPlan (Ours)</td><td><span class="best">0.64</span></td><td>0.26</td><td><span class="best">0.46</span></td><td><span class="best">0.37</span></td><td><span class="best">0.88</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tcard">
+        <h3>Ablation — transition deviation ↓</h3>
+        <div class="tsub">Alternative injection strategies for the planning signal.</div>
+        <ul class="ablation-list">
+          <li><span>Global AdaLN</span><span>5.64</span></li>
+          <li><span>Local AdaLN</span><span>4.39</span></li>
+          <li><span>w/o Fractional RoPE</span><span>2.13</span></li>
+          <li><span>Latent addition</span><span>1.76</span></li>
+          <li><span>Static semantic tokens</span><span>0.82</span></li>
+          <li class="ours"><span>Learnable token + FRoPE (Ours)</span><span>0.64</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= BIBTEX ================= -->
+<section>
+  <div class="wrap">
+    <div class="section-kicker">Citation</div>
+    <h2 class="section-title">BibTeX</h2>
+    <div class="bibtex-card">
+      <button class="copy-btn" id="copyBib">copy</button>
+<pre id="bibtex">@article{<span class="key">guo2026shotplan</span>,
+  title   = {ShotPlan: Cinematic Video Generation with Learnable Planning Token},
+  author  = {Guo, Su and Liu, Guangce and Yang, Haosen and Wang, Jiepeng and
+             Liu, Cong and Liu, Junqi and Huang, Haibin and Yao, Hongxun and
+             Zhang, Chi and Li, Xuelong},
+  journal = {arXiv preprint},
+  year    = {2026}
+}</pre>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>ShotPlan · Institute of Artificial Intelligence (TeleAI), China Telecom · <a href="https://github.com/Pensioner-11/ShotPlan" target="_blank" rel="noopener">github.com/Pensioner-11/ShotPlan</a></p>
+    <p style="margin-top:8px">Website template hand-crafted for this project. Videos are generated samples, 832×480 · 81 frames.</p>
+  </div>
+</footer>
+
+<script>
+// ---------------- video data ----------------
+const TOTAL_FRAMES = 81;
+// Hard-cut showcase. `cuts` = requested cut frames; `det` = actual cut frames
+// measured by TransNet V2 shot-boundary detection on the generated video.
+const VIDEOS = [
+  {file:'character_001_cut18_40_63.mp4',  cuts:[17,39,62],
+   prompt:'A red-haired photographer shoots a dew-covered dark orchid in a golden sunlit meadow, cutting from wide shot to macro flower detail to her face.'},
+  {file:'character_002_cut23_44_62.mp4',  cuts:[22,43,61],
+   prompt:'Executives meet in a skyscraper boardroom at dusk, city skyline behind glass, cool blue light, wide shot cutting to close-ups of each face.'},
+  {file:'character_026_cut31_55.mp4',     cuts:[30,54],
+   prompt:'A woman in a knit beanie photographs an iris in a misty sunlit garden, macro dewdrop insert cutting to warm close-ups as she reviews shots.'},
+  {file:'character_032_cut28_51.mp4',     cuts:[26,50],
+   prompt:'A professor writes equations on a chalkboard in a wood-paneled lecture hall, dusty golden light, cutting between him lecturing and a student taking notes.'},
+  {file:'scene_069_cut22_44_63.mp4',      cuts:[21,43,61],
+   prompt:'An astronaut floats outside a space station window with Earth below, wide hexagonal-porthole view cutting to a close-up of a woman watching inside.'},
+  {file:'scene_079_cut31_54.mp4',         cuts:[30,53],
+   prompt:'A muscular blacksmith hammers glowing metal on an anvil in a fiery stone forge, cutting from wide shot to sparks flying in close-up.'},
+  {file:'aesthetic_urban_008_cut19_39_62.mp4',  cuts:[18,39,61],
+   prompt:'A couple in love talks on a Florence terrace overlooking the Duomo at golden sunset, romantic mood, wide skyline shot to tender close-ups.'},
+  {file:'aesthetic_urban_037_cut19_41_63.mp4',  cuts:[17,62],
+   prompt:'A man and woman converse in a subway passage with blue vine murals on rock walls, cool moody light, wide shot to over-shoulder close-ups.'},
+  {file:'aesthetic_daily_013_cut21_42_59.mp4',  cuts:[19,41,58],
+   prompt:'A red-haired woman chats with a cheerful baker in a rustic sunlit bakery, warm tones, wide shot to baguette close-up and shared laughter.'},
+  {file:'aesthetic_daily_028_cut20_40_59.mp4',  cuts:[19,39,58],
+   prompt:'A young couple flirts between white sheets on a garden clothesline at golden hour, playful mood, wide shot cutting to intimate close-ups.'},
+  {file:'aesthetic_nature_024_cut28_60.mp4',    cuts:[27,58],
+   prompt:'Two climbers in bright parkas talk near a snowy summit at fiery sunset, breath steaming, wide mountain vista cutting to glowing close-ups.'},
+  {file:'aesthetic_nature_056_cut19_40_62.mp4', cuts:[17,39,61],
+   prompt:'A mother and son explore a dewy misty meadow at sunrise with a magnifying glass, soft golden light, detail shot to warm close-ups.'},
+  {file:'idiom_106_dilemma_cut29_58.mp4',       cuts:[28,57],
+   prompt:'A female astronaut works at a spacecraft control panel, Earth visible outside, cold blue light, cutting from her gloved hand to intense facial close-ups.'},
+  {file:'idiom_177_storm_cut22_40_61.mp4',      cuts:[21,39,60],
+   prompt:'A blue-haired woman in a leather jacket plays synthesizers in a neon-lit music studio, cutting from over-shoulder detail to wide studio views.'},
+  {file:'idiom_084_humble_cottage_cut17_38_61.mp4', cuts:[15,37,59],
+   prompt:'Spider-Man and Wonder Woman face each other by a golden lakeside at sunset, tall reeds swaying, wide shot cutting to alternating close-ups.'},
+  {file:'case09_cut20_40_61.mp4',  cuts:[19,39,60],
+   prompt:'An astronaut drifts from a hexagonal space station window into open space above Earth, cinematic lens flares, wide interior shot to helmet close-up.'},
+  {file:'case13_cut20_40_63.mp4',  cuts:[19,39,61],
+   prompt:'An elderly monk writes with a quill by candlelight in a dark stone monastery, warm chiaroscuro, wide shot to ink-on-parchment close-up.'},
+  {file:'case14_cut44.mp4',        cuts:[43],
+   prompt:'A female astronaut floats weightless inside a spacecraft above Earth, hair drifting in blue starlight, wide window shot cutting to serene close-up.'},
+  {file:'case21_cut18_39_62.mp4',  cuts:[17,39,61],
+   prompt:'A bearded man in a plaid shirt roasts food over a campfire in a dark pine forest, sparks and smoke, wide shot to fire-lit close-ups.'},
+  {file:'case23_cut29_55.mp4',     cuts:[28,54],
+   prompt:'A Roman senator in a purple-trimmed toga addresses a soldier among ancient columns, golden light, wide shot cutting to a solemn hand-on-chest speech.'},
+  {file:'case41_cut42.mp4',        cuts:[41],
+   prompt:'A mountaineer in an orange jacket sits atop a snowy summit above the clouds at sunrise, wide shot cutting to a golden-lit close-up profile.'},
+  {file:'case66_cut18_43_63.mp4',  cuts:[16,42,62],
+   prompt:'An elderly fisherman waits on a misty lake pier at dawn, muted blue tones, wide shot cutting to his rod, weathered face, and drifting bobber.'},
+  {file:'case67_cut28_50.mp4',     cuts:[26,48],
+   prompt:'An old librarian works among towering bookshelves in dusty golden light, wide shot cutting to a stamp pressing a page and warm close-ups of his face.'},
+  {file:'case83_cut16_39_61.mp4',  cuts:[15,38,59],
+   prompt:'A Victorian woman in lace sips tea in a sunlit rose garden, soft romantic light, medium shot cutting to close-ups of teacup and silver teapot.'},
+];
+// Soft transitions (cross-fades)
+const SOFT_VIDEOS = [
+  {file:'soft_transition_case21.mp4', cuts:[], soft:true,
+   prompt:'An anime magical girl with long blonde hair twirls a glowing staff against a starry night sky, wide shot smoothly transitioning to a sparkling medium shot.'},
+];
+// Camera movement (single continuous take, movement triggered at a frame)
+const CAM_VIDEOS = [
+  {file:'camera_circle_left.mp4',        title:'Circle Left',              cuts:[]},
+  {file:'camera_circle_right_start25.mp4', title:'Circle Right · from frame 25', cuts:[25]},
+  {file:'camera_zoom_in_start10.mp4',    title:'Zoom In · from frame 10',  cuts:[10]},
+  {file:'camera_zoom_out_start45.mp4',   title:'Zoom Out · from frame 45', cuts:[45]},
+  {file:'camera_pull_back_start40.mp4',  title:'Pull Back · from frame 40',cuts:[40]},
+  {file:'camera_move_right_start25.mp4', title:'Truck Right · from frame 25', cuts:[25]},
+];
+
+function autoTitle(v, i){
+  if (v.title) return v.title;
+  return 'Multi-Shot Case ' + String(i+1).padStart(2,'0');
+}
+
+function buildCard(v, i, kind){
+  const card = document.createElement('div');
+  card.className = 'vcard';
+  const markers = v.cuts.map(c =>
+    `<span class="marker" style="left:${(c/TOTAL_FRAMES*100).toFixed(2)}%"></span>`).join('');
+  let label, shots;
+  if (kind === 'cam') {
+    label = v.cuts.length ? `movement starts @ frame ${v.cuts[0]}` : 'full-clip movement';
+    shots = 'single take';
+  } else if (kind === 'soft') {
+    label = 'cross-fade transition';
+    shots = 'soft cut';
+  } else {
+    label = `cuts @ ${v.cuts.join(' / ')}`;
+    shots = `${v.cuts.length + 1} shots`;
+  }
+  const title = v.prompt ? `<div class="vprompt">${v.prompt}</div>` : `<div class="vtitle">${autoTitle(v, i)}</div>`;
+  card.innerHTML = `
+    <video muted loop playsinline preload="metadata"
+           src="assets/videos/${v.file}"></video>
+    <div class="vmeta">
+      ${title}
+      <div class="cutbar">${markers}<span class="head"></span></div>
+      <div class="cutlabels">
+        <span class="cuts">${label}</span>
+        <span class="shots">${shots}</span>
+      </div>
+    </div>`;
+  const video = card.querySelector('video');
+  const head  = card.querySelector('.head');
+  card.addEventListener('mouseenter', () => video.play().catch(()=>{}));
+  card.addEventListener('mouseleave', () => video.pause());
+  video.addEventListener('click', () => video.paused ? video.play() : video.pause());
+  video.addEventListener('timeupdate', () => {
+    if (video.duration) head.style.left = (video.currentTime / video.duration * 100) + '%';
+  });
+  return card;
+}
+
+const grid = document.getElementById('grid');
+VIDEOS.forEach((v,i) => grid.appendChild(buildCard(v, i, 'hard')));
+const softgrid = document.getElementById('softgrid');
+SOFT_VIDEOS.forEach((v,i) => softgrid.appendChild(buildCard(v, i, 'soft')));
+const camgrid = document.getElementById('camgrid');
+CAM_VIDEOS.forEach((v,i) => camgrid.appendChild(buildCard(v, i, 'cam')));
+
+// ---------------- bibtex copy ----------------
+document.getElementById('copyBib').addEventListener('click', function(){
+  navigator.clipboard.writeText(document.getElementById('bibtex').innerText).then(() => {
+    this.textContent = 'copied!';
+    setTimeout(() => this.textContent = 'copy', 1600);
+  });
+});
+</script>
+</body>
+</html>
