@@ -130,6 +130,7 @@ def wan_parser():
     parser.add_argument("--initialize_model_on_cpu", default=False, action="store_true", help="Init on CPU.")
     parser.add_argument("--data_format", type=str, default="videvent", help="Data profile key.")
     parser.add_argument("--ds_config", type=str, default=None, help="Path to DeepSpeed config JSON (default: ds_config.json next to this script).")
+    parser.add_argument("--init_ckpt", type=str, default=None, help="Path to a trained checkpoint (step-N.safetensors) to warm-start the DiT from, e.g. to continue training after an interruption.")
     return parser
 
 
@@ -223,6 +224,19 @@ if __name__ == "__main__":
     # Register the planning token and swap in the cut-aware model function.
     if current_profile is not None and hasattr(current_profile, "configure_pipeline"):
         current_profile.configure_pipeline(model.pipe)
+
+    # Warm-start from a previously trained checkpoint (must happen after
+    # configure_pipeline so hardcut_embedding exists as a parameter).
+    if args.init_ckpt is not None:
+        from safetensors.torch import load_file as load_safetensors
+        if accelerator.is_main_process:
+            print(f"[Main] Warm-starting DiT from checkpoint: {args.init_ckpt}")
+        init_state_dict = load_safetensors(args.init_ckpt)
+        load_msg = model.pipe.dit.load_state_dict(init_state_dict, strict=False)
+        assert not load_msg.missing_keys, f"Missing keys when loading init_ckpt: {load_msg.missing_keys}"
+        if accelerator.is_main_process and load_msg.unexpected_keys:
+            print(f"[Main] init_ckpt unexpected keys (ignored): {load_msg.unexpected_keys}")
+        del init_state_dict
 
     # --- Train ---
     model_logger = ModelLogger(
