@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://pensioner-11.github.io/ShotPlan/"><b>🌐 Project Page</b></a>
   &nbsp;·&nbsp;
-  <b>📄 Paper (arXiv coming soon)</b>
+  <a href="https://arxiv.org/abs/2607.17675"><b>📄 Paper</b></a>
   &nbsp;·&nbsp;
   <a href="https://huggingface.co/Pensioner/ShotPlan-Wan2.2-T2V-A14B-HighNoise"><b>🤗 Model</b></a>
   &nbsp;·&nbsp;
@@ -140,6 +140,19 @@ bash train/train_wan22_highnoise.sh
 ```
 
 The planning token is registered as a DiT parameter named `hardcut_embedding` (shape `[1, 1, dim]`) and optimized jointly with the DiT weights. For Wan2.2, `--max_timestep_boundary 0.358` restricts training to the high-noise segment of the flow-matching schedule, matching the MoE routing boundary.
+
+## Citation
+
+```bibtex
+@article{guo2026shotplan,
+  title={ShotPlan: Cinematic Video Generation with Learnable Planning Token},
+  author={Guo, Su and Liu, Guangce and Yang, Haosen and Wang, Jiepeng and Liu, Cong and Liu, Junqi and Huang, Haibin and Yao, Hongxun and Zhang, Chi and Li, Xuelong},
+  journal={arXiv preprint arXiv:2607.17675},
+  year={2026}
+}
+```
+
+If you use the training data, please also cite [VidEvent](https://arxiv.org/abs/2506.02448) (Liang et al.), from which our dataset is derived — we thank the authors for releasing it.
 
 ## Acknowledgements
 
